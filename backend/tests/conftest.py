@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 import app.models  # noqa: F401
 from app.db import Base, get_db
 from app.main import create_app
-from app.security import login_limiter
+from app.security import login_ip_limiter, login_limiter
 from tests.helpers import registrar_e_logar
 
 
@@ -44,6 +44,7 @@ def client(engine):
 
     application.dependency_overrides[get_db] = _get_db
     login_limiter.reset()
+    login_ip_limiter.reset()
     return TestClient(application)
 
 

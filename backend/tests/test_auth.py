@@ -51,3 +51,21 @@ def test_me_e_config(client, auth):
 def test_config_lente_invalida_422(client, auth):
     r = client.patch("/me/config", headers=auth, json={"lentes": ["astrologia"]})
     assert r.status_code == 422
+
+
+def test_lockout_de_um_cliente_nao_afeta_outro_ip(client):
+    from fastapi.testclient import TestClient
+
+    for _ in range(6):
+        client.post("/auth/login", json={"email": "a@example.com", "senha": "errada-errada"})
+    outro = TestClient(client.app, client=("9.9.9.9", 5000))
+    r = outro.post("/auth/login", json={"email": "a@example.com", "senha": "errada-errada"})
+    assert r.status_code == 401
+
+
+def test_login_rate_limit_por_ip_429(client):
+    for i in range(20):
+        r = client.post("/auth/login", json={"email": f"u{i}@example.com", "senha": "errada-errada"})
+        assert r.status_code == 401
+    r = client.post("/auth/login", json={"email": "u99@example.com", "senha": "errada-errada"})
+    assert r.status_code == 429

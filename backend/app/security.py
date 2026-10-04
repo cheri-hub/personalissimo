@@ -1,5 +1,5 @@
 import time
-from collections import defaultdict, deque
+from collections import deque
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
@@ -44,16 +44,22 @@ class SlidingWindowLimiter:
         self._max = max_events
         self._window = window_seconds
         self._clock = clock
-        self._events: dict[str, deque[float]] = defaultdict(deque)
+        self._events: dict[str, deque[float]] = {}
 
     def allow(self, key: str) -> bool:
         agora = self._clock()
-        eventos = self._events[key]
-        while eventos and agora - eventos[0] >= self._window:
-            eventos.popleft()
-        if len(eventos) >= self._max:
+        eventos = self._events.get(key)
+        if eventos is not None:
+            while eventos and agora - eventos[0] >= self._window:
+                eventos.popleft()
+            if not eventos:
+                del self._events[key]
+                eventos = None
+        if eventos is not None and len(eventos) >= self._max:
             return False
-        eventos.append(agora)
+        if self._max <= 0:
+            return False
+        self._events.setdefault(key, deque()).append(agora)
         return True
 
     def reset(self) -> None:
@@ -61,3 +67,4 @@ class SlidingWindowLimiter:
 
 
 login_limiter = SlidingWindowLimiter(max_events=5, window_seconds=60)
+login_ip_limiter = SlidingWindowLimiter(max_events=20, window_seconds=60)

@@ -34,3 +34,23 @@ def test_sliding_window_limiter():
     assert limiter.allow("outro") is True
     agora[0] = 61.0
     assert limiter.allow("k") is True
+
+
+def test_limiter_does_not_leak_keys():
+    agora = [0.0]
+    limiter = SlidingWindowLimiter(1, 60, clock=lambda: agora[0])
+    assert limiter.allow("k") is True
+    assert limiter.allow("k") is False
+    assert limiter.allow("k") is False
+    assert list(limiter._events) == ["k"]
+    assert len(limiter._events["k"]) == 1
+    agora[0] = 61.0
+    assert limiter.allow("k") is True
+    assert list(limiter._events) == ["k"]
+    assert len(limiter._events["k"]) == 1
+
+
+def test_limiter_denied_unknown_key_creates_no_entry():
+    limiter = SlidingWindowLimiter(0, 60)
+    assert limiter.allow("k") is False
+    assert limiter._events == {}

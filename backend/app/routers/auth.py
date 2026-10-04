@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import get_current_user
 from app.models import Usuario
-from app.security import create_token, hash_password, login_limiter, verify_password
+from app.security import (
+    create_token,
+    hash_password,
+    login_ip_limiter,
+    login_limiter,
+    verify_password,
+)
 
 router = APIRouter(tags=["auth"])
 
@@ -63,9 +69,10 @@ def registrar(payload: RegistroIn, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/login", response_model=Token)
-def login(payload: LoginIn, db: Session = Depends(get_db)):
+def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)):
     email = payload.email.lower()
-    if not login_limiter.allow(email):
+    ip = request.client.host if request.client else "unknown"
+    if not login_ip_limiter.allow(ip) or not login_limiter.allow(f"{ip}:{email}"):
         raise HTTPException(status_code=429, detail="Muitas tentativas. Aguarde um minuto.")
     user = db.scalar(select(Usuario).where(Usuario.email == email))
     senha_ok = verify_password(user.senha_hash if user else _DUMMY_HASH, payload.senha)
