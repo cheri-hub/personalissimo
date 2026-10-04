@@ -40,14 +40,23 @@ def decode_token(token: str) -> int | None:
 class SlidingWindowLimiter:
     """In-memory limiter (per process). Enough for v1; use Redis when scaling out."""
 
-    def __init__(self, max_events: int, window_seconds: float, clock: Callable[[], float] = time.monotonic):
+    def __init__(
+        self,
+        max_events: int,
+        window_seconds: float,
+        clock: Callable[[], float] = time.monotonic,
+        sweep_threshold: int = 10_000,
+    ):
         self._max = max_events
         self._window = window_seconds
         self._clock = clock
+        self._sweep_threshold = sweep_threshold
         self._events: dict[str, deque[float]] = {}
 
     def allow(self, key: str) -> bool:
         agora = self._clock()
+        if len(self._events) > self._sweep_threshold:
+            self._sweep(agora)
         eventos = self._events.get(key)
         if eventos is not None:
             while eventos and agora - eventos[0] >= self._window:
@@ -61,6 +70,11 @@ class SlidingWindowLimiter:
             return False
         self._events.setdefault(key, deque()).append(agora)
         return True
+
+    def _sweep(self, agora: float) -> None:
+        self._events = {
+            k: v for k, v in self._events.items() if v and agora - v[-1] < self._window
+        }
 
     def reset(self) -> None:
         self._events.clear()

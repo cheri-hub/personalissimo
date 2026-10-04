@@ -54,3 +54,23 @@ def test_limiter_denied_unknown_key_creates_no_entry():
     limiter = SlidingWindowLimiter(0, 60)
     assert limiter.allow("k") is False
     assert limiter._events == {}
+
+
+def test_limiter_sweeps_many_one_shot_keys():
+    agora = [0.0]
+    limiter = SlidingWindowLimiter(2, 60, clock=lambda: agora[0], sweep_threshold=5)
+    for i in range(50):
+        assert limiter.allow(f"k{i}") is True
+    agora[0] = 100.0
+    assert limiter.allow("novo") is True
+    assert len(limiter._events) <= 2
+
+
+def test_limiter_sweep_keeps_keys_inside_window():
+    agora = [0.0]
+    limiter = SlidingWindowLimiter(1, 60, clock=lambda: agora[0], sweep_threshold=3)
+    assert limiter.allow("preso") is True
+    agora[0] = 50.0
+    for i in range(5):
+        limiter.allow(f"k{i}")
+    assert limiter.allow("preso") is False
