@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useApi } from '../auth'
 import type { Campo, Recurso } from '../recursos'
 
@@ -47,19 +47,28 @@ export function ResourceManager({ path, titulo, campos }: Recurso) {
   const [editando, setEditando] = useState<number | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
+  const pathAtivo = useRef<string | null>(path)
+
   const carregar = useCallback(async () => {
     try {
-      setItens(await request<Item[]>(path))
+      const dados = await request<Item[]>(path)
+      if (pathAtivo.current === path) setItens(dados)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro inesperado.')
+      if (pathAtivo.current === path) setErro(e instanceof Error ? e.message : 'Erro inesperado.')
     }
   }, [request, path])
 
   useEffect(() => {
+    pathAtivo.current = path
+    setItens([])
+    setErro(null)
     setForm(vazio(campos))
     setEditando(null)
     void carregar()
-  }, [carregar, campos])
+    return () => {
+      pathAtivo.current = null
+    }
+  }, [carregar, campos, path])
 
   async function salvar(e: FormEvent) {
     e.preventDefault()

@@ -21,7 +21,7 @@ export function Financas() {
           </button>
         ))}
       </div>
-      <ResourceManager {...ABAS[ativa]} />
+      <ResourceManager key={ABAS[ativa].path} {...ABAS[ativa]} />
     </main>
   )
 }
