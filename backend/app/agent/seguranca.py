@@ -6,16 +6,16 @@ _SINAIS = tuple(
     for p in (
         r"suicid",
         r"automutila",
-        r"me (matar|cortar|ferir|machucar)",
-        r"nao quero (mais )?viver",
-        r"quer(o|ia) morrer",
-        r"vou morrer",
-        r"tirar (a )?(minha )?(propria )?vida",
-        r"acabar com (a )?(minha )?(vida|tudo)",
-        r"quero sumir",
-        r"nao aguento mais",
-        r"nao vale a pena viver",
-        r"melhor sem mim",
+        r"\bme (matar|cortar|ferir|machucar)\b",
+        r"\bnao quero (mais )?viver\b",
+        r"\bquer(o|ia) morrer\b",
+        r"\bvou morrer\b",
+        r"\btirar (a )?(minha )?(propria )?vida\b",
+        r"\bacabar com (a )?(minha )?(vida|tudo)\b",
+        r"\bquero sumir\b",
+        r"\bnao aguento mais\b",
+        r"\bnao vale a pena viver\b",
+        r"\bmelhor sem mim\b",
     )
 )
 
