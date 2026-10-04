@@ -16,6 +16,7 @@ export function Config() {
   const [lentes, setLentes] = useState<string[]>([])
   const [tom, setTom] = useState('acolhedor')
   const [limite, setLimite] = useState<number | null>(null)
+  const [carregado, setCarregado] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -25,6 +26,7 @@ export function Config() {
         setLentes(p.lentes)
         setTom(p.tom)
         setLimite(p.limite_diario ?? null)
+        setCarregado(true)
       })
       .catch((e) => setErro(e instanceof Error ? e.message : 'Erro inesperado.'))
   }, [request])
@@ -35,6 +37,7 @@ export function Config() {
 
   async function salvar(e: FormEvent) {
     e.preventDefault()
+    if (!carregado) return
     setMsg(null)
     setErro(null)
     try {
@@ -49,7 +52,7 @@ export function Config() {
     <main>
       <form className="card" onSubmit={salvar}>
         <h2>Configurações</h2>
-        <fieldset>
+        <fieldset disabled={!carregado}>
           <legend>Lentes de reflexão</legend>
           {LENTES.map(([chave, rotulo]) => (
             <label key={chave}>
@@ -60,16 +63,17 @@ export function Config() {
         </fieldset>
         <label>
           Tom
-          <select value={tom} onChange={(e) => setTom(e.target.value)}>
+          <select disabled={!carregado} value={tom} onChange={(e) => setTom(e.target.value)}>
             <option value="direto">direto</option>
             <option value="acolhedor">acolhedor</option>
             <option value="provocador">provocador</option>
           </select>
         </label>
+        {!carregado && !erro && <p className="muted">Carregando…</p>}
         {limite !== null && <p className="muted">Limite diário de perguntas: {limite}</p>}
         {erro && <p role="alert" className="erro">{erro}</p>}
         {msg && <p>{msg}</p>}
-        <button type="submit">Salvar</button>
+        <button type="submit" disabled={!carregado}>Salvar</button>
       </form>
     </main>
   )

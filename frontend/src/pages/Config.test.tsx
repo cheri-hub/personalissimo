@@ -22,4 +22,34 @@ describe('Config', () => {
     })
     expect(await screen.findByText('Configurações salvas.')).toBeInTheDocument()
   })
+
+  it('mantém Salvar desabilitado e não envia PATCH enquanto /me carrega', async () => {
+    let liberar: () => void = () => {}
+    const espera = new Promise<void>((r) => (liberar = r))
+    const perfil = { id: 1, email: 'a@example.com', lentes: ['estoicismo'], tom: 'acolhedor', limite_diario: 20 }
+    const fetchMock = mockFetch(() => perfil)
+    fetchMock.mockImplementationOnce(async () => {
+      await espera
+      return new Response(JSON.stringify(perfil), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
+    renderComAuth(<Config />)
+    const salvar = screen.getByRole('button', { name: 'Salvar' })
+    expect(salvar).toBeDisabled()
+    expect(screen.getByText('Carregando…')).toBeInTheDocument()
+    await userEvent.click(salvar)
+    expect(fetchMock.mock.calls.some(([, i]) => i?.method === 'PATCH')).toBe(false)
+    liberar()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled())
+    expect(screen.getByLabelText('Estoicismo')).toBeChecked()
+  })
+
+  it('com falha em /me mostra erro, mantém Salvar desabilitado e nunca envia PATCH', async () => {
+    const fetchMock = mockFetch(() => ({ status: 500, body: { detail: 'Falha' } }))
+    renderComAuth(<Config />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha')
+    const salvar = screen.getByRole('button', { name: 'Salvar' })
+    expect(salvar).toBeDisabled()
+    await userEvent.click(salvar)
+    expect(fetchMock.mock.calls.some(([, i]) => i?.method === 'PATCH')).toBe(false)
+  })
 })
