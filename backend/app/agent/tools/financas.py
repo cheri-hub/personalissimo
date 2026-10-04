@@ -134,6 +134,9 @@ def simular_compra(
     juros_mensal_pct: float = 0.0,
     hoje: date | None = None,
 ) -> dict:
+    for x in (valor, parcelas, juros_mensal_pct):
+        if isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x):
+            raise ValueError("valores devem ser números finitos")
     if valor <= 0:
         raise ValueError("valor deve ser maior que zero")
     if parcelas < 1 or parcelas != int(parcelas):

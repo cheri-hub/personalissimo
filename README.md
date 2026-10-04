@@ -23,3 +23,10 @@ e uma reflexão filosófica/terapêutica, usando os dados que você cadastrou.
 ## Produção
 
 Termine HTTPS no host (proxy/PaaS), use segredos via variáveis de ambiente e troque `create_all` por migrações.
+
+- Atrás de um proxy reverso, rode o uvicorn com `--proxy-headers --forwarded-allow-ips=<IP do proxy>` para que
+  `request.client.host` seja o IP real do cliente (nunca confie cegamente no `X-Forwarded-For`).
+- Os limitadores de taxa (login, cadastro, perguntas) ficam em memória: use um único worker, ou mova-os para o Redis
+  antes de escalar horizontalmente.
+- O limite diário de perguntas reinicia às 00:00 UTC (21:00 em Brasília).
+- No plano gratuito do Gemini, use apenas dados fictícios (veja o aviso no topo).

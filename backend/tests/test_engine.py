@@ -105,3 +105,23 @@ def test_prompt_usa_lentes_e_tom_do_usuario(db, user):
     responder(db, user, "Posso?", fake)
     system, _ = fake.chamadas[0]
     assert "Estoicismo" in system and "direto" in system.lower()
+
+
+def test_nota_antiga_de_sofrimento_nao_ativa_acolhimento(db, user):
+    from datetime import datetime, timedelta, timezone
+
+    antiga = datetime.now(timezone.utc) - timedelta(days=8)
+    db.add(Nota(user_id=user.id, texto="ando pensando em suicídio", tags=[], criado_em=antiga))
+    db.commit()
+    p = responder(db, user, "Posso comprar um notebook?", FakeProvider([texto(VEREDITO_OK)]))
+    assert p.modo == "veredito"
+
+
+def test_nota_de_ontem_com_sofrimento_ativa_acolhimento(db, user):
+    from datetime import datetime, timedelta, timezone
+
+    ontem = datetime.now(timezone.utc) - timedelta(days=1)
+    db.add(Nota(user_id=user.id, texto="ando pensando em suicídio", tags=[], criado_em=ontem))
+    db.commit()
+    p = responder(db, user, "Posso comprar um notebook?", FakeProvider([]))
+    assert p.modo == "acolhimento"

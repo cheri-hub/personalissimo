@@ -69,3 +69,22 @@ def test_login_rate_limit_por_ip_429(client):
         assert r.status_code == 401
     r = client.post("/auth/login", json={"email": "u99@example.com", "senha": "errada-errada"})
     assert r.status_code == 429
+
+
+def test_registro_rate_limit_por_ip_429(client):
+    for i in range(10):
+        r = client.post("/auth/registro", json={"email": f"u{i}@example.com", "senha": "senha-segura-1"})
+        assert r.status_code == 201
+    r = client.post("/auth/registro", json={"email": "extra@example.com", "senha": "senha-segura-1"})
+    assert r.status_code == 429
+    assert r.json()["detail"] == "Muitas tentativas de cadastro. Tente mais tarde."
+
+
+def test_registro_usa_limite_diario_configurado(client, monkeypatch):
+    from app.config import Settings
+
+    cfg = Settings(_env_file=None, database_url="sqlite://", jwt_secret="x" * 40, daily_question_limit=7)
+    monkeypatch.setattr("app.routers.auth.get_settings", lambda: cfg)
+    r = client.post("/auth/registro", json={"email": "a@example.com", "senha": "senha-segura-1"})
+    assert r.status_code == 201
+    assert r.json()["limite_diario"] == 7

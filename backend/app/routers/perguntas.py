@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,8 +13,10 @@ from app.config import get_settings
 from app.db import get_db
 from app.deps import get_current_user
 from app.models import Pergunta, Usuario
+from app.security import question_limiter
 
 router = APIRouter(prefix="/perguntas", tags=["perguntas"])
+logger = logging.getLogger(__name__)
 
 
 class PerguntaIn(BaseModel):
@@ -53,14 +56,22 @@ def perguntar(
     db: Session = Depends(get_db),
     provider: LLMProvider = Depends(get_provider),
 ):
+    if not question_limiter.allow(f"user:{user.id}"):
+        raise HTTPException(status_code=429, detail="Muitas perguntas seguidas. Aguarde um minuto.")
     if _perguntas_hoje(db, user.id) >= user.limite_diario:
         raise HTTPException(status_code=429, detail="Limite diário de perguntas atingido. Volte amanhã.")
     try:
         return responder(db, user, payload.texto, provider)
-    except ProviderQuotaError:
-        raise HTTPException(status_code=503, detail="O serviço de IA está sobrecarregado. Tente novamente em alguns minutos.")
-    except (MotorErro, ProviderError):
-        raise HTTPException(status_code=502, detail="Não consegui gerar uma resposta confiável. Tente novamente.")
+    except ProviderQuotaError as exc:
+        logger.warning("Falha do provedor de IA: %s: %s", type(exc).__name__, exc)
+        raise HTTPException(
+            status_code=503, detail="O serviço de IA está sobrecarregado. Tente novamente em alguns minutos."
+        ) from exc
+    except (MotorErro, ProviderError) as exc:
+        logger.warning("Falha do provedor de IA: %s: %s", type(exc).__name__, exc)
+        raise HTTPException(
+            status_code=502, detail="Não consegui gerar uma resposta confiável. Tente novamente."
+        ) from exc
 
 
 @router.get("", response_model=list[PerguntaOut])

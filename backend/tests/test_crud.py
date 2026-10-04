@@ -66,3 +66,11 @@ def test_validacao_valor_negativo_422(client, auth):
 def test_frequencia_invalida_422(client, auth):
     r = client.post("/despesas", headers=auth, json={"descricao": "x", "valor": "5", "frequencia": "semanal"})
     assert r.status_code == 422
+
+
+@pytest.mark.parametrize("metodo", ["get", "put", "delete"])
+def test_id_gigante_422(client, auth, metodo):
+    kwargs = {"json": {"descricao": "x", "valor": "1", "frequencia": "mensal"}} if metodo == "put" else {}
+    r = getattr(client, metodo)(f"/rendas/{2**63}", headers=auth, **kwargs)
+    assert r.status_code == 422
+    assert getattr(client, metodo)("/rendas/0", headers=auth, **kwargs).status_code == 422

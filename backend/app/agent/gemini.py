@@ -61,7 +61,6 @@ class GeminiProvider:
         config = types.GenerateContentConfig(
             system_instruction=system,
             tools=[_declarar(tools)] if tools else None,
-            temperature=0.3,
         )
         resposta = self._chamar(_para_contents(historico), config)
         chamadas = tuple(

@@ -108,3 +108,8 @@ def test_parse_rejeita_valor_nao_finito(token):
     assert token in texto
     with pytest.raises(ValueError):
         parse_veredito(texto)
+
+
+def test_prompt_orienta_acolhimento_e_cvv_em_sofrimento():
+    p = build_system_prompt([], "acolhedor")
+    assert "sofrimento emocional" in p and "CVV (188)" in p

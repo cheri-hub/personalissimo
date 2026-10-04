@@ -121,3 +121,30 @@ def test_painel(client, auth, engine):
 
 def test_painel_requer_autenticacao(client):
     assert client.get("/painel").status_code == 401
+
+
+def test_perguntas_rate_limit_429(client, auth):
+    _usar(client, FakeProvider([texto(VEREDITO_OK)] * 6))
+    for _ in range(6):
+        assert client.post("/perguntas", headers=auth, json={"texto": "Posso comprar?"}).status_code == 201
+    r = client.post("/perguntas", headers=auth, json={"texto": "Posso comprar?"})
+    assert r.status_code == 429
+    assert r.json()["detail"] == "Muitas perguntas seguidas. Aguarde um minuto."
+
+
+def test_perguntas_rate_limit_conta_tentativas_com_falha(client, auth):
+    _usar(client, _Quebrado(ProviderQuotaError("x")))
+    for _ in range(6):
+        assert client.post("/perguntas", headers=auth, json={"texto": "Posso comprar?"}).status_code == 503
+    assert client.post("/perguntas", headers=auth, json={"texto": "Posso comprar?"}).status_code == 429
+
+
+def test_falha_do_provedor_loga_tipo_e_mensagem(client, auth, caplog):
+    import logging
+
+    _usar(client, _Quebrado(ProviderQuotaError("cota-esgotada")))
+    with caplog.at_level(logging.WARNING, logger="app.routers.perguntas"):
+        client.post("/perguntas", headers=auth, json={"texto": "texto-secreto-da-pergunta"})
+    assert "ProviderQuotaError" in caplog.text
+    assert "cota-esgotada" in caplog.text
+    assert "texto-secreto-da-pergunta" not in caplog.text

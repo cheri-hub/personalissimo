@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,6 +12,7 @@ from app.models import Nota, Pergunta, Usuario
 
 MAX_RODADAS = 6
 NOTAS_VERIFICADAS = 3
+NOTAS_JANELA_DIAS = 7
 
 
 class MotorErro(Exception):
@@ -17,9 +20,10 @@ class MotorErro(Exception):
 
 
 def _notas_recentes(db: Session, user_id: int) -> list[str]:
+    limite = datetime.now(timezone.utc) - timedelta(days=NOTAS_JANELA_DIAS)
     consulta = (
         select(Nota.texto)
-        .where(Nota.user_id == user_id)
+        .where(Nota.user_id == user_id, Nota.criado_em >= limite)
         .order_by(Nota.criado_em.desc(), Nota.id.desc())
         .limit(NOTAS_VERIFICADAS)
     )

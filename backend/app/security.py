@@ -1,3 +1,4 @@
+import threading
 import time
 from collections import deque
 from collections.abc import Callable
@@ -52,8 +53,13 @@ class SlidingWindowLimiter:
         self._clock = clock
         self._sweep_threshold = sweep_threshold
         self._events: dict[str, deque[float]] = {}
+        self._lock = threading.Lock()
 
     def allow(self, key: str) -> bool:
+        with self._lock:
+            return self._allow(key)
+
+    def _allow(self, key: str) -> bool:
         agora = self._clock()
         if len(self._events) > self._sweep_threshold:
             self._sweep(agora)
@@ -77,8 +83,11 @@ class SlidingWindowLimiter:
         }
 
     def reset(self) -> None:
-        self._events.clear()
+        with self._lock:
+            self._events.clear()
 
 
 login_limiter = SlidingWindowLimiter(max_events=5, window_seconds=60)
 login_ip_limiter = SlidingWindowLimiter(max_events=20, window_seconds=60)
+question_limiter = SlidingWindowLimiter(max_events=6, window_seconds=60)
+register_ip_limiter = SlidingWindowLimiter(max_events=10, window_seconds=3600)

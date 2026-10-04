@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_db
 from app.deps import get_current_user
 from app.models import Usuario
@@ -14,6 +15,7 @@ from app.security import (
     hash_password,
     login_ip_limiter,
     login_limiter,
+    register_ip_limiter,
     verify_password,
 )
 
@@ -56,8 +58,15 @@ class ConfigIn(BaseModel):
 
 
 @router.post("/auth/registro", response_model=PerfilOut, status_code=201)
-def registrar(payload: RegistroIn, db: Session = Depends(get_db)):
-    user = Usuario(email=payload.email.lower(), senha_hash=hash_password(payload.senha))
+def registrar(payload: RegistroIn, request: Request, db: Session = Depends(get_db)):
+    ip = request.client.host if request.client else "unknown"
+    if not register_ip_limiter.allow(ip):
+        raise HTTPException(status_code=429, detail="Muitas tentativas de cadastro. Tente mais tarde.")
+    user = Usuario(
+        email=payload.email.lower(),
+        senha_hash=hash_password(payload.senha),
+        limite_diario=get_settings().daily_question_limit,
+    )
     db.add(user)
     try:
         db.commit()

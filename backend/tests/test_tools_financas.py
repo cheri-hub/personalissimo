@@ -112,3 +112,38 @@ def test_simular_meta_inalcancavel_com_saldo_negativo(db, user):
 def test_simular_entradas_invalidas(db, user, kwargs):
     with pytest.raises(ValueError):
         financas.simular_compra(db, user.id, **kwargs)
+
+
+def test_simular_rejeita_nao_finitos_e_bool(db, user):
+    for args in (
+        {"valor": float("nan")},
+        {"valor": float("inf")},
+        {"valor": 100, "parcelas": float("inf")},
+        {"valor": 100, "parcelas": float("nan")},
+        {"valor": 100, "juros_mensal_pct": float("nan")},
+        {"valor": 100, "juros_mensal_pct": float("inf")},
+        {"valor": True},
+        {"valor": 100, "parcelas": True},
+        {"valor": 100, "juros_mensal_pct": True},
+    ):
+        with pytest.raises(ValueError, match="números finitos"):
+            financas.simular_compra(db, user.id, hoje=HOJE, **args)
+
+
+def test_ferramentas_isoladas_entre_usuarios(db, user):
+    outro = criar_usuario(db, email="outro@example.com")
+    assert financas.obter_fluxo_de_caixa(db, outro.id, hoje=HOJE) == {
+        "periodo": "mensal",
+        "renda": 0.0,
+        "despesas": 0.0,
+        "despesas_essenciais": 0.0,
+        "parcelas_dividas": 0.0,
+        "saldo": 0.0,
+    }
+    assert financas.listar_dividas(db, outro.id) == {"dividas": [], "total_saldo": 0.0, "total_parcelas": 0.0}
+    assert financas.listar_metas(db, outro.id) == {"metas": []}
+    assert financas.obter_patrimonio(db, outro.id) == {"itens": [], "total": 0.0, "liquido": 0.0}
+    r = financas.simular_compra(db, outro.id, valor=1000, hoje=HOJE)
+    assert r["saldo_mensal_antes"] == 0.0
+    assert r["patrimonio_liquido_antes"] == 0.0
+    assert r["metas"] == []

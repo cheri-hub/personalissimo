@@ -74,3 +74,22 @@ def test_limiter_sweep_keeps_keys_inside_window():
     for i in range(5):
         limiter.allow(f"k{i}")
     assert limiter.allow("preso") is False
+
+
+def test_limiter_thread_safe_never_exceeds_max():
+    import threading
+
+    limiter = SlidingWindowLimiter(10, 60)
+    permitidos = []
+
+    def tentar():
+        for _ in range(50):
+            permitidos.append(limiter.allow("k"))
+
+    threads = [threading.Thread(target=tentar) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert permitidos.count(True) == 10
+    assert len(permitidos) == 400
