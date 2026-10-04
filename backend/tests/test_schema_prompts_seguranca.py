@@ -73,16 +73,26 @@ def test_acolhimento_menciona_cvv():
     assert "188" in ACOLHIMENTO and "CVV" in ACOLHIMENTO
 
 
-@pytest.mark.parametrize(
-    "texto",
-    ["Não quero mais viver", "penso em suicídio", "quero me matar", "vou acabar com tudo", "Quero MORRER", "pensei em me machucar"],
-)
-def test_detecta_sofrimento(texto):
-    assert detecta_sofrimento(texto) is True
+FRASES_SOFRIMENTO = [
+    "não quero viver", "não quero mais viver", "queria morrer", "vou morrer", "quero morrer",
+    "tirar a minha vida", "tirar minha própria vida", "acabar com a vida", "acabar com a minha vida",
+    "acabar com tudo", "quero sumir", "não aguento mais", "não vale a pena viver", "melhor sem mim",
+    "me cortar", "me ferir", "me machucar", "automutilação", "suicídio", "me matar",
+]
+
+
+@pytest.mark.parametrize("frase", FRASES_SOFRIMENTO)
+def test_detecta_sofrimento(frase):
+    assert detecta_sofrimento(frase) is True
+    assert detecta_sofrimento(f"penso: {frase}!") is True
+    assert detecta_sofrimento(frase.upper()) is True
+    assert detecta_sofrimento(frase.replace(" ", "  ")) is True
+    assert detecta_sofrimento(frase.replace(" ", "\n")) is True
 
 
 @pytest.mark.parametrize(
-    "texto", ["Posso comprar um notebook de R$ 6.000?", "Quero acabar com minhas dívidas", "Vou viajar mês que vem"]
+    "texto", ["Posso comprar um notebook de R$ 6.000?", "Quero acabar com minhas dívidas", "Vou viajar mês que vem",
+     "Preciso morar sozinho", "Posso cortar gastos?", "vou vender o carro"]
 )
 def test_nao_detecta_em_perguntas_comuns(texto):
     assert detecta_sofrimento(texto) is False
@@ -90,3 +100,11 @@ def test_nao_detecta_em_perguntas_comuns(texto):
 
 def test_detecta_em_qualquer_texto_da_lista():
     assert detecta_sofrimento("Posso comprar?", "ontem pensei em suicídio") is True
+
+
+@pytest.mark.parametrize("token", ["NaN", "Infinity", "-Infinity"])
+def test_parse_rejeita_valor_nao_finito(token):
+    texto = json.dumps(OK).replace("2650.0", token)
+    assert token in texto
+    with pytest.raises(ValueError):
+        parse_veredito(texto)

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class Numero(BaseModel):
     rotulo: str
-    valor: float
+    valor: float = Field(allow_inf_nan=False)
     unidade: Literal["BRL", "meses", "%", "parcelas"]
 
 
