@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import Base, get_engine
+from app.routers import auth
 
 
 def create_app() -> FastAPI:
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    application.include_router(auth.router)
 
     @application.get("/health")
     def health() -> dict[str, str]:

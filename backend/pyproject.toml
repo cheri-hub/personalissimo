@@ -30,4 +30,4 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-m 'not integration'"
 markers = ["integration: calls the real Gemini API (needs GEMINI_API_KEY)"]
-filterwarnings = ["ignore:Dialect sqlite.*Decimal"]
+filterwarnings = ["ignore:Dialect sqlite.*Decimal", "ignore:Using .httpx. with .starlette.testclient. is deprecated"]
