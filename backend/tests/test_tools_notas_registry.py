@@ -72,3 +72,23 @@ def test_executor_rejeita_argumentos_nao_declarados(db, user, args):
 
 def test_executor_valor_invalido_vira_erro(db, user):
     assert "erro" in build_executor(db, user.id)("simular_compra", {"valor": -1})
+
+
+@pytest.mark.parametrize("nome", ["buscar_notas", "obter_notas_relevantes"])
+def test_executor_limite_infinito_vira_erro(db, user, nome):
+    args = {"limite": float("inf")}
+    if nome == "buscar_notas":
+        args["termo"] = "a"
+    assert "erro" in build_executor(db, user.id)(nome, args)
+
+
+def test_executor_parcelas_infinitas_vira_erro(db, user):
+    r = build_executor(db, user.id)("simular_compra", {"valor": 10, "parcelas": float("inf")})
+    assert "erro" in r
+
+
+@pytest.mark.parametrize("args", [{"user_id": 999}, {"db": 1}, {"hoje": "x"}])
+def test_executor_nao_vaza_mensagem_python(db, user, args):
+    erro = build_executor(db, user.id)("obter_fluxo_de_caixa", args)["erro"]
+    assert "argumentos inválidos" in erro
+    assert "keyword argument" not in erro

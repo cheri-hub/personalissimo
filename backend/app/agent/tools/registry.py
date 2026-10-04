@@ -60,7 +60,11 @@ def build_executor(db: Session, user_id: int, hoje: date | None = None) -> Calla
             return {"erro": f"ferramenta desconhecida: {nome}"}
         try:
             return funcao(**(args or {}))
-        except (TypeError, ValueError) as exc:
+        except TypeError:
+            return {"erro": f"argumentos inválidos para {nome}"}
+        except ValueError as exc:
             return {"erro": str(exc)}
+        except ArithmeticError:
+            return {"erro": f"valor numérico inválido em {nome}"}
 
     return executar
